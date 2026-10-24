@@ -13,7 +13,7 @@ A Zed extension that highlights TODO / BUG / FIXME / NOTE in user-chosen colors 
 - Positions are UTF-16 (Zed uses PointUtf16 for semantic tokens).
 - `lsp-server`'s `initialize_finish` consumes the `initialized` notification. Do post-init work at the start of the main loop.
 
-## Marketplace
+## Marketplace (not pursued, notes kept for reference)
 - Extension ID `todo-lens-lsp` (registry requires an `-lsp`/`-language-server` suffix for LSP-only extensions; the ID can't contain `zed`/`extension`). Language server name stays `todo-lens` (the settings key).
 - Registry rules: no duplicate functionality. `todo-highlight-language-server` (shionit/zed-todo-highlight) already does highlighting; our distinguishing feature is the project-wide list (workspace/symbol), outline and diagnostics.
 - Submission = PR to zed-industries/extensions adding submodule `extensions/todo-lens-lsp` + `extensions.toml` entry, then `pnpm sort-extensions`. Must be tested in Zed at the submitted commit.
@@ -30,7 +30,8 @@ A Zed extension that highlights TODO / BUG / FIXME / NOTE in user-chosen colors 
 - [x] Extension compiles to wasm32-wasip2
 - [x] README, release workflow
 - [ ] Verified inside Zed GUI (Install Dev Extension). Needs the user
-- [ ] First tagged release (repo must be public for the downloader)
+- [x] Releases v0.1.0 and v0.1.1 published; repo is public, download works without auth
+- Marketplace submission: not planned (user decided 2026-10-24)
 
 ## Log
 - 2026-10-24: v0.1.1: keyword/comment tokens with per-tag modifiers (works without color rules), ID renamed to todo-lens-lsp, release workflow builds a draft first and publishes when all binaries are uploaded.
