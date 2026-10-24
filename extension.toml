@@ -1,0 +1,19 @@
+id = "todo-lens"
+name = "Todo Lens"
+description = "Highlights TODO, BUG, FIXME and NOTE comments with your own colors, and lists every one of them in the project symbol picker."
+version = "0.1.0"
+schema_version = 1
+authors = ["Lenni707"]
+repository = "https://github.com/Lenni707/zed-todo-lens"
+
+[language_servers.todo-lens]
+name = "Todo Lens"
+languages = [
+  "Astro", "Bash", "C", "C#", "C++", "CSS", "Clojure", "CMake", "Dart", "Dockerfile",
+  "Elixir", "Elm", "Erlang", "F#", "GDScript", "Gleam", "GLSL", "Go", "Go Mod", "GraphQL",
+  "Haskell", "HCL", "HEEX", "HTML", "Java", "JavaScript", "JSON", "JSONC", "Julia", "Kotlin",
+  "LaTeX", "Lua", "Makefile", "Markdown", "Nix", "OCaml", "Odin", "Perl", "PHP", "PowerShell",
+  "Proto", "Python", "R", "Racket", "Ruby", "Rust", "Scala", "Scheme", "SCSS", "Shell Script",
+  "Solidity", "SQL", "Svelte", "Swift", "Terraform", "TOML", "TSX", "TypeScript", "Vue.js",
+  "WGSL", "XML", "YAML", "Zig",
+]

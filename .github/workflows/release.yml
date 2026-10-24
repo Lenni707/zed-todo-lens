@@ -1,0 +1,53 @@
+name: Release server
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    steps:
+      - run: gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes --draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  build:
+    needs: create-release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: aarch64-apple-darwin, os: macos-latest }
+          - { target: x86_64-apple-darwin, os: macos-latest }
+          - { target: x86_64-unknown-linux-gnu, os: ubuntu-latest }
+          - { target: aarch64-unknown-linux-gnu, os: ubuntu-24.04-arm }
+          - { target: x86_64-pc-windows-msvc, os: windows-latest }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup target add ${{ matrix.target }}
+      - run: cargo build --release --target ${{ matrix.target }}
+        working-directory: server
+      - name: Package (unix)
+        if: runner.os != 'Windows'
+        run: tar -czf todo-lens-ls-${{ matrix.target }}.tar.gz -C server/target/${{ matrix.target }}/release todo-lens-ls
+      - name: Package (windows)
+        if: runner.os == 'Windows'
+        run: Compress-Archive -Path server/target/${{ matrix.target }}/release/todo-lens-ls.exe -DestinationPath todo-lens-ls-${{ matrix.target }}.zip
+      - run: gh release upload "${{ github.ref_name }}" todo-lens-ls-${{ matrix.target }}.* --repo "${{ github.repository }}"
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  # Publish only once every binary is uploaded, so the extension never sees a release with missing assets.
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - run: gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft=false --latest
+        env:
+          GH_TOKEN: ${{ github.token }}
