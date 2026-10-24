@@ -2,6 +2,7 @@ use serde::Deserialize;
 use serde_json::Value;
 
 pub const DEFAULT_TAGS: [&str; 4] = ["TODO", "BUG", "FIXME", "NOTE"];
+pub const MAX_TAGS: usize = 32;
 
 /// User settings, read from `lsp."todo-lens".settings` in Zed's settings.json.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -44,20 +45,17 @@ impl Config {
         let mut config: Config = serde_json::from_value(value.clone()).unwrap_or_default();
         config.tags.retain(|t| !t.trim().is_empty());
         config.tags.dedup();
+        // Each tag is one bit in the semantic token modifier bitset.
+        config.tags.truncate(MAX_TAGS);
         if config.tags.is_empty() {
             config.tags = Self::default().tags;
         }
         config
     }
 
-    /// The semantic token type name for a tag, e.g. `TODO` -> `todo`.
-    pub fn token_type(tag: &str) -> String {
+    /// The semantic token modifier for a tag, e.g. `TODO` -> `todo`.
+    pub fn modifier(tag: &str) -> String {
         tag.to_lowercase()
-    }
-
-    /// The semantic token type name for the text after a tag, e.g. `TODO` -> `todo_text`.
-    pub fn text_token_type(tag: &str) -> String {
-        format!("{}_text", tag.to_lowercase())
     }
 }
 

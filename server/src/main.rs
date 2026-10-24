@@ -32,20 +32,21 @@ fn main() -> Result<()> {
     let params: InitializeParams = serde_json::from_value(params)?;
     let config = Config::from_value(params.initialization_options.as_ref());
 
-    // The token legend is fixed for the lifetime of the server, so it is built from the tags
-    // configured at startup. Changing `tags` later needs a server restart to get new colors.
+    // Tags are sent as the standard `keyword` token type (the keyword itself) and `comment`
+    // (the text after it), each with a per-tag modifier like `todo`. Themes color `keyword`
+    // out of the box, and rules can target `{ "token_type": "keyword", "token_modifiers": ["todo"] }`.
+    // The modifier list is fixed for the lifetime of the server, so changing `tags` needs a restart.
     let legend_tags = config.tags.clone();
-    let mut token_types: Vec<SemanticTokenType> =
-        legend_tags.iter().map(|t| SemanticTokenType::from(Config::token_type(t))).collect();
-    token_types.extend(legend_tags.iter().map(|t| SemanticTokenType::from(Config::text_token_type(t))));
+    let token_modifiers: Vec<SemanticTokenModifier> =
+        legend_tags.iter().map(|t| SemanticTokenModifier::from(Config::modifier(t))).collect();
 
     let capabilities = ServerCapabilities {
         text_document_sync: Some(TextDocumentSyncCapability::Kind(TextDocumentSyncKind::FULL)),
         semantic_tokens_provider: Some(SemanticTokensServerCapabilities::SemanticTokensOptions(
             SemanticTokensOptions {
                 legend: SemanticTokensLegend {
-                    token_types,
-                    token_modifiers: vec![],
+                    token_types: vec![SemanticTokenType::KEYWORD, SemanticTokenType::COMMENT],
+                    token_modifiers,
                 },
                 full: Some(SemanticTokensFullOptions::Bool(true)),
                 range: Some(false),
@@ -298,7 +299,7 @@ impl<'a> Server<'a> {
         if config.tags != self.legend_tags {
             self.show_message(
                 MessageType::INFO,
-                "Todo Lens: tags changed. Restart the language server (editor: restart language server) to color new tags.",
+                "Todo Lens: tags changed. Restart the language server (editor: restart language server) so new tags get their own colors.",
             )?;
         }
         self.scanner = Arc::new(Scanner::new(&config.tags));
@@ -316,23 +317,25 @@ impl<'a> Server<'a> {
         let Some(path) = uri_to_path(uri) else {
             return SemanticTokensResult::Tokens(SemanticTokens::default());
         };
-        let n = self.legend_tags.len() as u32;
-        let mut raw: Vec<(u32, u32, u32, u32)> = Vec::new(); // line, start, len, type
+        const KEYWORD: u32 = 0;
+        const COMMENT: u32 = 1;
+        let mut raw: Vec<(u32, u32, u32, u32, u32)> = Vec::new(); // line, start, len, type, modifiers
         for tag in self.index.get(&path) {
             // Map from the current tag list to the legend, which was fixed at startup.
             let Some(legend_idx) = self.legend_tags.iter().position(|t| *t == self.scanner.tags()[tag.kind]) else {
                 continue;
             };
-            raw.push((tag.line, tag.start, tag.len, legend_idx as u32));
+            let modifiers = 1 << legend_idx;
+            raw.push((tag.line, tag.start, tag.len, KEYWORD, modifiers));
             if tag.text_len > 0 {
-                raw.push((tag.line, tag.text_start, tag.text_len, n + legend_idx as u32));
+                raw.push((tag.line, tag.text_start, tag.text_len, COMMENT, modifiers));
             }
         }
         raw.sort();
 
         let mut data = Vec::with_capacity(raw.len());
         let (mut prev_line, mut prev_start) = (0, 0);
-        for (line, start, length, token_type) in raw {
+        for (line, start, length, token_type, token_modifiers_bitset) in raw {
             let delta_line = line - prev_line;
             let delta_start = if delta_line == 0 { start - prev_start } else { start };
             data.push(SemanticToken {
@@ -340,7 +343,7 @@ impl<'a> Server<'a> {
                 delta_start,
                 length,
                 token_type,
-                token_modifiers_bitset: 0,
+                token_modifiers_bitset,
             });
             prev_line = line;
             prev_start = start;

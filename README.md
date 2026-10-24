@@ -17,7 +17,7 @@ let x = 1; // BUG(lenni): off by one  ← "BUG(lenni):" in your BUG color
 | The tags in the current file | **Outline**: `cmd-shift-o`, or the Outline Panel |
 | A panel with every tag (optional) | **Project Diagnostics**: `cmd-shift-m`, once `"diagnostics": true` is set |
 
-Zed extensions can't add their own panels or menus yet, so Todo Lens uses these built-in views. Colors are set in `settings.json` (see below).
+Zed extensions can't add their own panels or menus yet, so Todo Lens uses these built-in views. Tags use your theme's keyword color by default. You can pick your own colors in `settings.json` (see below).
 
 The project is scanned in the background when the server starts. The scan respects `.gitignore` and skips hidden files, binaries and files over 1 MB. Open buffers update as you type, and other files update when they change on disk.
 
@@ -33,36 +33,45 @@ Then in Zed: **Extensions → Install Dev Extension** and choose this folder.
 
 **From a release:** if `todo-lens-ls` isn't on `PATH`, the extension downloads the server binary from this repo's latest GitHub release. This only works when the repo is public.
 
-### 2. Enable semantic tokens and choose your colors
+### 2. Enable semantic tokens
 
-Add this to your Zed `settings.json` (`cmd-,`):
+Add this one line to your **global** Zed `settings.json` (`cmd-,`):
 
 ```jsonc
 {
-  // Required: Zed only requests semantic tokens when this is on.
-  "semantic_tokens": "combined",
+  "semantic_tokens": "combined"
+}
+```
 
+Tags are now highlighted in your theme's keyword color. Zed only asks language servers for semantic tokens when this is on, and extensions can't change it for you.
+
+`"combined"` also turns on semantic highlighting from your other language servers, such as rust-analyzer. If you only want it for some languages, set it per language instead: `"languages": { "Rust": { "semantic_tokens": "combined" } }`.
+
+### Choose your colors (optional)
+
+Each tag is sent as a `keyword` token (the keyword itself) and a `comment` token (the text after it), with the tag name in lowercase as a modifier. Add rules for the ones you want to recolor. These go in the **global** `settings.json`; Zed doesn't allow `global_lsp_settings` in a project's `.zed/settings.json`.
+
+```jsonc
+{
   "global_lsp_settings": {
     "semantic_token_rules": [
       // The keyword itself
-      { "token_type": "todo",  "foreground_color": "#FFB000", "font_weight": "bold" },
-      { "token_type": "bug",   "foreground_color": "#FF4D4D", "font_weight": "bold" },
-      { "token_type": "fixme", "foreground_color": "#FF7A00", "font_weight": "bold" },
-      { "token_type": "note",  "foreground_color": "#4DA6FF", "font_weight": "bold" },
+      { "token_type": "keyword", "token_modifiers": ["todo"],  "foreground_color": "#FFB000", "font_weight": "bold" },
+      { "token_type": "keyword", "token_modifiers": ["bug"],   "foreground_color": "#FF4D4D", "font_weight": "bold" },
+      { "token_type": "keyword", "token_modifiers": ["fixme"], "foreground_color": "#FF7A00", "font_weight": "bold" },
+      { "token_type": "keyword", "token_modifiers": ["note"],  "foreground_color": "#4DA6FF", "font_weight": "bold" },
 
       // Optional: the text after the keyword
-      { "token_type": "todo_text",  "foreground_color": "#FFB000" },
-      { "token_type": "bug_text",   "foreground_color": "#FF4D4D" },
-      { "token_type": "fixme_text", "foreground_color": "#FF7A00" },
-      { "token_type": "note_text",  "foreground_color": "#4DA6FF" }
+      { "token_type": "comment", "token_modifiers": ["todo"],  "foreground_color": "#FFB000" },
+      { "token_type": "comment", "token_modifiers": ["bug"],   "foreground_color": "#FF4D4D" },
+      { "token_type": "comment", "token_modifiers": ["fixme"], "foreground_color": "#FF7A00" },
+      { "token_type": "comment", "token_modifiers": ["note"],  "foreground_color": "#4DA6FF" }
     ]
   }
 }
 ```
 
-Each rule also accepts `background_color`, `font_style: "italic"`, `underline` (`true` or a color) and `strikethrough`. Remove a rule to leave that part uncolored.
-
-`"semantic_tokens": "combined"` also turns on semantic highlighting from your other language servers, such as rust-analyzer. If you only want it for some languages, set it per language instead: `"languages": { "Rust": { "semantic_tokens": "combined" } }`.
+Each rule also accepts `background_color`, `font_style: "italic"`, `underline` (`true` or a color) and `strikethrough`. These rules only affect Todo Lens tokens, because other language servers don't use these modifiers.
 
 ### 3. Options (optional)
 
@@ -82,7 +91,7 @@ Each rule also accepts `background_color`, `font_style: "italic"`, `underline` (
 }
 ```
 
-A custom tag `HACK` gets the token types `hack` and `hack_text`; add rules for them to color it. After changing `tags`, run **editor: restart language server**.
+A custom tag `HACK` gets the modifier `hack`; add rules with `"token_modifiers": ["hack"]` to color it. Up to 32 tags are supported. After changing `tags`, run **editor: restart language server**.
 
 ## How comments are detected
 
